@@ -1,5 +1,7 @@
+# mac file
+.DS_Store
 
-#latex file
+# latex file
 *.aux
 *.bbl
 *.blg
