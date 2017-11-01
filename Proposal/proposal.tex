@@ -1,7 +1,21 @@
 \documentclass[10pt]{article}
 
+% [H] option for figure
 \usepackage{graphicx}
 \usepackage{float}
+
+%hyper link need to place after graphicx package
+\usepackage{hyperref}
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    filecolor=magenta,      
+    urlcolor=cyan,
+    citecolor=red,
+}
+
+
+
 
 % paragraph spacing
 \setlength{\parskip}{0.2em}
@@ -79,7 +93,10 @@ The first task would be to finalize a system flow, a representation of how the a
 \section{Schedule plan} % (fold)
 \label{sec:schedule_plane}
 
-Table \ref{t:1} describes the schedule for doing the project consisting of 7 main tasks within approximately 8 weeks. For now, we have just finished the proposal, discussed what the challenges of super resolution are, clarified the direction for our project. For the following 2 weeks, we will do literature review. My group has three members so each one takes responsibility on reviewing 2 methods. We will try to answer: "What is new idea for this method? How/Why the method works? What is the limitation of the method". After each paper review, there will be a group meeting to share the knowledge with the other members. Next, we will reproduce the results of the surveyed methods. It is expected to obtain the same results with the authors'. We will do some modifications to make the codes runnable in the same context (test-bed), and we will try to implement the methods that source code is not available. After working on literature review and result reproducing, we will focus on our proposed method. From the related work, it is expected that we will come up with new ideas that extend the existing methods or address their drawbacks. We will focus on network architecture and cost function formulation. For the next week, we will work on model tuning and regularization, and we expect the model will generalize well and be consistent. To have elaborate experiments, we will produce the result of the methods in different setting. Finally, the last 5 days are devoted for the report and presentation. 
+Table \ref{t:1} describes the schedule for doing the project consisting of 7 main tasks within approximately 8 weeks. For now, we have just finished the proposal, discussed what the challenges of super resolution are, clarified the direction for our project. For the following 2 weeks, we will do literature review. My group has three members so each one takes responsibility on reviewing 2 methods. We will try to answer: "What is new idea for this method? How/Why the method works? What is the limitation of the method". After each paper review, there will be a group meeting to share the knowledge with the other members. Next, we will reproduce the results of the surveyed methods. It is expected to obtain the same results with the authors'. We will do some modifications to make the codes runnable in the same context (test-bed), and we will try to implement the methods that source code is not available. After working on literature review and result reproducing, we will focus on our proposed method. From the related work, it is expected that we will come up with new ideas that extend the existing methods or address their drawbacks. We will focus on network architecture and cost function formulation. For the next week, we will work on model tuning and regularization, and we expect the model will generalize well and be consistent. To have elaborate experiments, we will produce the result of the methods in different setting. Finally, the last 5 days are devoted for the report and presentation.
+
+\noindent
+To improve teamwork quality, all the documents for the project will be uploaded into Google Drive folder at the link \url{https://drive.google.com/open?id=0B22Qrl9Ar7OgV08tNzctQkVTSnc}. For implementation, the source code will be available at Github \url{https://github.com/thangvubk/NeuralNetworkProject.git}. 
 \begin{table}[H]
 \centering
 \caption{Schedule plan for the project}
