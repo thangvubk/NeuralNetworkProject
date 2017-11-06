@@ -1,3 +1,4 @@
+from __future__ import division
 import os
 import glob
 import scipy.misc
@@ -82,9 +83,9 @@ def slicing_image(inp, label, I, L, stride):
             sub_labels.append(sub_label)
     return sub_inputs, sub_labels
 
-def make_input(config):
+def make_data(config):
     """
-    Produce image and label from config
+    Produce sub images and labels from config
 
     Args:
         Config: config to produce image and label
@@ -116,13 +117,35 @@ def make_input(config):
     labels = np.asarray(labels) # shape (N, L, L, 1)
     return inputs, labels
 
-# testing
-if __name__ == "__main__":
-    paths = get_image_paths('Train')
-    image = imread(paths[0])
-    print(image)
-    inp, label = process_image(image)
-    scipy.misc.imsave('inp.png', inp)
-    scipy.misc.imsave('label.png', label)
-    print(inp)
-    print(label)
+def make_test_data(config):
+    """
+    Generate test data of original size for test time
+    """
+    inputs = []
+    labels = []
+    dir_path = config['dir_path']
+    scale = config['scale']
+    is_grayscale = config['is_gray']
+    I = config['input_size']
+    L = config['label_size']
+
+    image_paths = get_image_paths(dir_path)
+
+    for path in image_paths:
+        image = imread(path, is_grayscale)
+        inp, label = process_image(image, scale)
+
+        # crop label by offset
+        offset = abs(I - L)//2
+        label = label[offset:-offset, offset:-offset]
+
+        #make channel axis
+        inp = inp[:, :, np.newaxis]
+        label = label[:, :, np.newaxis]
+        inputs.append(inp)
+        labels.append(label)
+
+    inputs = np.asarray(inputs)
+    labels = np.asarray(labels)
+    return inputs, labels
+

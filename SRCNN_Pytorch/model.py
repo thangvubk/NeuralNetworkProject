@@ -23,6 +23,7 @@ class SRCNN(nn.Module):
                  C1=64, C2=32, C3=1,
                  F1=9, F2=1, F3=5):
         super(SRCNN, self).__init__()
+        self.offset = (F1 + F2 + F3 - 3)/2
         self.conv1 = nn.Conv2d(1, C1, F1) # in, out, kernel
         self.conv2 = nn.Conv2d(C1, C2, F2)
         self.conv3 = nn.Conv2d(C2, C3, F3)

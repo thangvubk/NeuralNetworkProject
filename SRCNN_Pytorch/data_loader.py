@@ -1,6 +1,6 @@
 import torch
 from torch.utils.data import Dataset, DataLoader
-from utils import make_input
+from utils import make_data, make_test_data
 
 class SRCNN_dataset(Dataset):
     """
@@ -10,9 +10,11 @@ class SRCNN_dataset(Dataset):
         config: config to get dataset from utils
         transfrom: optional transform to be applied on a sample
     """
-    def __init__(self, config):
-        self.inputs, self.labels = make_input(config)
-    
+    def __init__(self, config, is_test=False):
+        if is_test:
+            self.inputs, self.labels = make_test_data(config)
+        else:
+            self.inputs, self.labels = make_data(config)
     def __len__(self):
         return self.inputs.shape[0]
 
@@ -30,6 +32,5 @@ class SRCNN_dataset(Dataset):
         input_sample, label_sample = torch.Tensor(input_sample), torch.Tensor(label_sample)
     
         return input_sample, label_sample
-
 
 

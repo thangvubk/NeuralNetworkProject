@@ -1,11 +1,15 @@
+from __future__ import division
 import torch
 import torch.optim as optim
 import torch.nn as nn
 import numpy as np
+import math
+import scipy.misc
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
 from data_loader import SRCNN_dataset
 from model import SRCNN
+
 
 class Solver(object):
     """
@@ -52,6 +56,8 @@ class Solver(object):
 
     def _reset(self):
         self.use_gpu = torch.cuda.is_available()
+        if self.use_gpu:
+            self.model = self.model.cuda()
         self.hist_train_psnr = []
         self.hist_val_psnr = []
         self.hist_loss = []
@@ -64,82 +70,101 @@ class Solver(object):
         #print('Batch size:', self.batch_size)
         return strs
     
-    def _epoch_step(self):
+    def _epoch_step(self, epoch):
         """
         Perform 1 training and validation epoch, capture history of loss, 
         avr_train_psnr, avr_val_psnr
         """
-        epoch_avr_psnr = {} # dictionary keeps psnr of train and val
-        for phase in ['train', 'val']:
-            if phase == 'train':
-                self.model.train(True) # torch API, set model to train mode
-            else:
-                self.model.train(False) # torch API, set model to evaluation mode
+        for i, (input_batch, label_batch) in enumerate(self.dataloaders['train']):
+            #Wrap with torch Variable
+            input_batch, label_batch = self._wrap_variable(input_batch,
+                                                           label_batch,
+                                                           self.use_gpu)
 
-            for i, (input_batch, label_batch) in enumerate(self.dataloaders[phase]):
-                #Wrap with torch Variable
-                input_batch, label_batch =  (Variable(input_batch), 
-                                             Variable(label_batch))
-                
-                #zero the grad
-                self.optimizer.zero_grad()
+            #zero the grad
+            self.optimizer.zero_grad()
 
-                # Forward
-                output_batch = self.model(input_batch)
-                
-                # compute and update epoch avr psnr
-                batch_avr_psnr = self.check_avr_PSNR(output_batch, label_batch)
-                # use get for safe increment
-                epoch_avr_psnr[phase] = epoch_avr_psnr.get(phase, 0) + batch_avr_psnr
+            # Forward
+            output_batch = self.model(input_batch)
+            loss = self.loss_fn(output_batch, label_batch)
+            
+            if self.verbose:
+                if i%self.print_every== 0:
+                    print('epoch %5d iter %5d, loss %.5f' \
+                            %(epoch, i, loss.data[0]))
+            
+            # Backward + update
+            loss.backward()
+            self.optimizer.step()
 
-                loss = self.loss_fn(output_batch, label_batch)
-                
-                if self.verbose:
-                    if i%self.print_every== 0:
-                        print('iter %5d, loss %.5f' \
-                                %(i, loss.data[0]))
-                
-                # Backward + update
-                if phase == 'train':
-                    loss.backward()
-                    self.optimizer.step()
-
-            # compute average psnr
-            epoch_size = len(self.datasets[phase])
-            epoch_avr_psnr[phase] = epoch_avr_psnr[phase]*self.batch_size/epoch_size
-        
-        # capture psnr
-        self.hist_train_psnr.append(epoch_avr_psnr['train'])
-        self.hist_val_psnr.append(epoch_avr_psnr['val'])
+    def _wrap_variable(self, input_batch, label_batch, use_gpu):
+        if use_gpu:
+            input_batch, label_batch = (Variable(input_batch.cuda()),
+                                        Variable(label_batch.cuda()))
+        else:
+            input_batch, label_batch = (Variable(input_batch),
+                                        Variable(label_batch))
+        return input_batch, label_batch
     
-    def check_avr_PSNR(self, output_batch, label_batch):
-        # output_batch: shape (N, C, H1, W1)
-        # label_batch: shape (N, C, H2, W2)
-        # H2 = H1 + offset
-        # W2 = W1 + offset
-
-        N = output_batch.size()[0]
-        
-        # Swap to numpy array
-        output = output_batch.clone().data.numpy()
-        label = label_batch.clone().data.numpy()
-
-        # change to numpy image (N, H, W, C)
-        output = output.transpose(0, 2, 3, 1)
-        label = label.transpose(0, 2, 3, 1)
-         
+    def _comput_PSNR(self, imgs1, imgs2):
         # Compute PSNR for gray scale
         # TODO: check for 3 channel image
-        imdiff = output - label
-        imdiff = imdiff.reshape(N, -1)
-        rmse = np.sqrt(np.linalg.norm(imdiff, axis=1))
-        psnr = 20*np.log10(255/rmse)
-        avr_psnr = np.mean(psnr)
+        N = imgs1.size()[0]
+        imdiff = imgs1 - imgs2
+        imdiff = imdiff.view(N, -1)
+        rmse = torch.norm(imdiff, p=2, dim=1)
+        # psnr = 20*log10(255/rmse)
+        psnr = 20*torch.log(255/rmse)/math.log(10)
+        psnr =  torch.sum(psnr)
+        return psnr
+
+                
+    def check_PSNR(self, dataset, is_test=False, batch_size=100):
+        dataloader = DataLoader(dataset, batch_size=batch_size,
+                                shuffle=False, num_workers=4)
+        
+        avr_psnr = 0
+        for batch, (input_batch, label_batch) in enumerate(dataloader):
+            input_batch, label_batch = self._wrap_variable(input_batch,
+                                                           label_batch,
+                                                           self.use_gpu)
+            
+            output_batch = self.model(input_batch)
+            
+            output = output_batch.clone().data
+            label = label_batch.clone().data
+            
+            output = output.squeeze(dim=1)
+            label = label.squeeze(dim=1)
+            
+            # use original image size for testing
+            if is_test:
+                inp = input_batch.clone().data
+                inp = inp.squeeze(dim=1)
+                save_output = output.cpu().numpy()
+                save_label = label.cpu().numpy()
+                save_input = inp.cpu().numpy()
+                
+                # crop input
+                offset = self.model.offset
+                save_input = save_input[:, offset:-offset, offset:-offset]
+                
+                scipy.misc.imsave('Result/output_{}.png'.format(batch), 
+                                  save_output[0])
+                scipy.misc.imsave('Result/label_{}.png'.format(batch), 
+                                  save_label[0])
+                scipy.misc.imsave('Result/input_{}.png'.format(batch),
+                                  save_input[0])
+            
+            psnr = self._comput_PSNR(output, label)
+            avr_psnr += psnr
+            
+        epoch_size = len(dataset)
+        avr_psnr /= epoch_size
+
         return avr_psnr
 
-
-
-        
+    
     def train(self):
         """
         Train the network
@@ -153,7 +178,6 @@ class Solver(object):
         """
 
         # load data
-        #dataset = SRCNN_dataset(data_config, transforms.ToTensor())
         train_loader = DataLoader(self.datasets['train'], batch_size=self.batch_size,
                                 shuffle=True, num_workers=4)
         val_loader = DataLoader(self.datasets['val'], batch_size=self.batch_size,
@@ -162,8 +186,24 @@ class Solver(object):
             'train': train_loader,
             'val': val_loader
         }
+        
+        # capture best model
+        best_val_psnr = -1
+        best_model_state = self.model.state_dict()
 
         # Train the model
         for epoch in range(self.num_epochs):
-            self._epoch_step()
+            self._epoch_step(epoch)
+
+            train_psnr = self.check_PSNR(self.datasets['train'])
+            val_psnr = self.check_PSNR(self.datasets['val'])
+            self.hist_train_psnr.append(train_psnr)
+            self.hist_val_psnr.append(val_psnr)
+
+            if best_val_psnr < val_psnr:
+                best_val_psnr = val_psnr
+                best_model_state = self.model.state_dict()
+
+        # load best model
+        self.model.load_state_dict(best_model_state)
            
