@@ -1,1 +1,41 @@
-# SRCNN_Pytorch
+# SRCNN pytorch implementation
+---
+
+This implement the paper **Image Super-Resolution Using Deep Convolutional Networks** in Pytorch. The paper and the code (in Caffe with Matlab wrapper) can be found at the offical [website](http://mmlab.ie.cuhk.edu.hk/projects/SRCNN.html). 
+
+
+
+## Usage
+
+
+```
+usage: main.py [-h] [-c S] [--train-path PATH] [--val-path PATH]
+               [--test-path PATH] [-i I] [-l L] [-s S] [-b B] [-n N] [-v]
+               PHASE
+
+SRCNN-pytorch implementation The easiest way to execute the project is For
+training: python main.py train For testing: python main.py test
+
+positional arguments:
+  PHASE                 train or test or both
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -c S, --scale S       interpolation scale
+  --train-path PATH     path of train data
+  --val-path PATH       path to val data
+  --test-path PATH      path to test data
+  -i I, --input_size I  size of input subimage for the model, the default
+                        value is aligned to the label size and the CNN
+                        architecture, make sure you understand the network
+                        architecture if you want to change this value
+  -l L, --label_size L  size of label subimage used to compute loss in CNN.
+                        The default value is aligned to the input and the CNN
+                        architecture, make sure you understand the network
+                        architecture if you want to change this value
+  -s S, --stride S      This is not the stride in CNN, this is stride used for
+                        image subsampleing
+  -b B, --batch-size B  batch size used for training
+  -n N, --num-epochs N  number of training epochs
+  -v, --verbose         print training information
+```
