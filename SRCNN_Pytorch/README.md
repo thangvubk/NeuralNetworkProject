@@ -1,11 +1,38 @@
 # SRCNN pytorch implementation
----
+------
 
 This implement the paper **Image Super-Resolution Using Deep Convolutional Networks** in Pytorch. The paper and the code (in Caffe with Matlab wrapper) can be found at the offical [website](http://mmlab.ie.cuhk.edu.hk/projects/SRCNN.html). 
 
+The SRCNN architechture is as follows.
+
+``Low resolution Img -> Conv1 -> ReLU -> Conv2 -> ReLu -> Conv3 -> High resolution Img`` 
 
 
 ## Usage
+The easiest way to execute the code is:
+- Train: ``python main.py train``
+- Test: ``python main.py test``
+- Both train and test: ``python main.py both``
+
+To display the training info, use ``python main.py train --verbose``
+
+After training phase the best model w.r.t. validation set is stored in ``trained_model.pt``, this will be used for test phase.
+
+After testing phase, the input (low resolution), output (high resolution), label (original resolution) images of test dataset are saved to ``Result`` folder. The average PSNR (between output and label) is shown on console. 
+
+### Original image:
+
+![orig](Result/label_4.png)
+
+### Bicubic interpolated image:
+
+![bicubic](Result/input_4.png)
+
+### SRCNN output image:
+
+![srcnn](Result/output_4.png)
+
+## Detail
 
 
 ```
@@ -39,3 +66,5 @@ optional arguments:
   -n N, --num-epochs N  number of training epochs
   -v, --verbose         print training information
 ```
+
+>The project is referred to this [repo](https://github.com/tegg89/SRCNN-Tensorflow)
