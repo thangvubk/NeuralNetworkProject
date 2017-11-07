@@ -9,7 +9,7 @@ The SRCNN architechture is as follows.
 
 ## Set-up (Tested on ``python2.7``)
 - Upgrade pip: ``pip install --upgrade pip``
-- Dependencies: ``pip install -r requirement.txt`` (recommended to use [virtualenv](https://virtualenv.pypa.io/en/stable/userguide/))
+- Dependencies: ``pip install -r requirements.txt`` (recommended to use [virtualenv](https://virtualenv.pypa.io/en/stable/userguide/))
 - Install pytorch: visit official Pytorch [website](http://pytorch.org/) and install pytorch based on your system.
 
 ## Usage
