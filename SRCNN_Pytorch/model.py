@@ -13,7 +13,7 @@ class SRCNN(nn.Module):
     """
     Model for SRCNN
 
-    Input -> Conv1 -> Relu -> Conv2 -> Relu -> Conv3 -> MSE
+    Low Resolution -> Conv1 -> Relu -> Conv2 -> Relu -> Conv3 -> High Resulution
     
     Args:
         - C1, C2, C3: num output channels for Conv1, Conv2, and Conv3
