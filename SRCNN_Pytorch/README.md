@@ -7,6 +7,10 @@ The SRCNN architechture is as follows.
 
 ``Low resolution Img -> Conv1 -> ReLU -> Conv2 -> ReLu -> Conv3 -> High resolution Img`` 
 
+## Set-up (Tested on ``python2.7``)
+- Upgrade pip: ``pip install --upgrade pip``
+- Dependencies: ``pip install -r requirement.txt`` (recommended to use [virtualenv](https://virtualenv.pypa.io/en/stable/userguide/))
+- Install pytorch: visit official Pytorch [website](http://pytorch.org/) and install pytorch based on your system.
 
 ## Usage
 The easiest way to execute the code is:
