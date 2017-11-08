@@ -1,7 +1,7 @@
 # SRCNN pytorch implementation
 ------
 
-This implement the paper **Image Super-Resolution Using Deep Convolutional Networks** in Pytorch. The paper and the code (in Caffe with Matlab wrapper) can be found at the offical [website](http://mmlab.ie.cuhk.edu.hk/projects/SRCNN.html). 
+This implements the paper **Image Super-Resolution Using Deep Convolutional Networks** in Pytorch. The paper and the code (in Caffe with Matlab wrapper) can be found at the offical [website](http://mmlab.ie.cuhk.edu.hk/projects/SRCNN.html). 
 
 The SRCNN architechture is as follows.
 
