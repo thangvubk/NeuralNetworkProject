@@ -4,10 +4,7 @@ from data_loader import SRCNN_dataset
 from model import SRCNN
 from solver import Solver
 
-description='SRCNN-pytorch implementation\n\
-The easiest way to execute the project is\n\
-For training: python main.py train\n\
-For testing: python main.py test'
+description='SRCNN-pytorch implementation'
 
 parser = argparse.ArgumentParser(description=description)
 
