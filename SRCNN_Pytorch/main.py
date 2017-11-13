@@ -71,9 +71,9 @@ def main():
     val_dataset_config = common_config.copy()
     test_dataset_config = common_config.copy()
 
-    train_dataset_config['dir_path'] = 'Train/'
-    val_dataset_config['dir_path'] = 'Test/Set14'
-    test_dataset_config['dir_path'] = 'Test/Set5'
+    train_dataset_config['dir_path'] = args.train_path
+    val_dataset_config['dir_path'] = args.val_path
+    test_dataset_config['dir_path'] = args.test_path
 
     print('Contructing dataset...')
     #construct dataset
