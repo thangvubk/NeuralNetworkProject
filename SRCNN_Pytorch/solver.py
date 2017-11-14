@@ -112,7 +112,7 @@ class Solver(object):
         N = imgs1.size()[0]
         imdiff = imgs1 - imgs2
         imdiff = imdiff.view(N, -1)
-        rmse = torch.norm(imdiff, p=2, dim=1)
+        rmse = torch.sqrt(torch.mean(imdiff**2, dim=1))
         psnr = 20*torch.log(255/rmse)/math.log(10) # psnr = 20*log10(255/rmse)
         psnr =  torch.sum(psnr)
         return psnr
