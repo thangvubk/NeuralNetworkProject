@@ -82,7 +82,7 @@ def main():
     print('Contructing dataset...')
     #construct dataset
     root = os.getcwd()
-    root = os.path.join(root, 'akiyo2')
+    root = os.path.join(root, 'overfit')
 
     if args.model == 'SRCNN_proposed':
         train_dataset = SR_dataset(root)
