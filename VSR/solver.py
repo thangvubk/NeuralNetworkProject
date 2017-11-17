@@ -153,12 +153,12 @@ class Solver(object):
                 offset = self.model.offset
                 save_input = save_input[:, offset:-offset, offset:-offset]
                 ########
-                #imdiff = (save_label[0] - save_input[0])
+                imdiff = (save_label[0] - save_input[0])
 
-                #mse = np.sqrt(np.mean(imdiff**2))
+                mse = np.sqrt(np.mean(imdiff**2))
 
-                #psnr = 20*np.log10(255/mse)
-                #print('average input pnsr', psnr)
+                psnr = 20*np.log10(255/mse)
+                print('average input pnsr', psnr)
 
                 imdiff = (save_label[0] - save_output[0])
 
@@ -173,8 +173,8 @@ class Solver(object):
                                   save_output[0])
                 scipy.misc.imsave('Result/label_{}.png'.format(batch), 
                                   save_label[0])
-                #scipy.misc.imsave('Result/input_{}.png'.format(batch),
-                #                  save_input[0])
+                scipy.misc.imsave('Result/input_{}.png'.format(batch),
+                                  save_input[0])
 
             
             psnr = self._comput_PSNR(output, label)

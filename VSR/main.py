@@ -1,8 +1,8 @@
 import argparse
 import sys
 import os
-from SR_datasets import SRCNN_dataset, SR_dataset
-from model import SRCNN, SRCNN_proposed
+from SR_datasets import DatasetFactory
+from model import ModelFactory
 from solver import Solver
 
 description='SRCNN-pytorch implementation'
@@ -82,9 +82,10 @@ def main():
     print('Contructing dataset...')
     #construct dataset
     root = os.getcwd()
-    root = os.path.join(root, 'overfit')
+    root = os.path.join(root, 'AugTrain')
+    root_test = ('Test/Set5')
 
-    if args.model == 'SRCNN_proposed':
+    """if args.model == 'SRCNN_proposed':
         train_dataset = SR_dataset(root)
         val_dataset = SR_dataset(root)
         test_dataset = SR_dataset(root)
@@ -98,7 +99,14 @@ def main():
         train_dataset = ESPCN_dataset(root)
         val_dataset = ESPCN_dataset(root)
         test_dataset = SRCNN_dataset(root)
-        model = ESPCN()
+        model = ESPCN()"""
+    dataset_roots = root, root, root_test
+    dataset_factory = DatasetFactory()
+    train_dataset, val_dataset, test_dataset = dataset_factory.create_dataset(args.model,
+                                                                              dataset_roots)
+
+    model_factory = ModelFactory()
+    model = model_factory.create_model(args.model)
 
 
     # use train_dataset val_dataset to train and validate the model

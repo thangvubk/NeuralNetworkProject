@@ -3,6 +3,18 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 import config
+MODELS = ['SRCNN', 'ESPCN']
+
+class ModelFactory(object):
+    
+    def create_model(self, model_name):
+        if model_name not in MODELS:
+            raise Exception('cannot find {} model'.format(model_name))
+        if model_name == 'SRCNN':
+            return SRCNN()
+        elif model_name == 'ESPCN':
+            return ESPCN()
+
 
 class SRCNN(nn.Module):
     """
@@ -50,7 +62,7 @@ class ESPCN(nn.Module):
     def __init__(self):
         super(ESPCN, self).__init__()
         self.offset = 0
-        self.conv1 = nn.Conv2d(1, 64, 5, padding=3)
+        self.conv1 = nn.Conv2d(1, 64, 5, padding=2)
         self.conv2 = nn.Conv2d(64, 32, 3, padding=1)
         self.conv3 = nn.Conv2d(32, 9, 3, padding=1)
     
