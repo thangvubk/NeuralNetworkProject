@@ -90,6 +90,53 @@ class SRCNN_dataset(SR_dataset):
         
         return low_res, high_res
 
+class ESPCN_dataset(SR_dataset):
+    
+    def subpixel_shuffle(self, img):
+        # convert img of shape (S*H, S*W, C) to (H, W, C*S**2)
+        # just test for gray sclae
+        # TODO: test for RBG image
+        SH, SW, C = img.shape
+        S = self.scale
+        W = SW//S
+        H = SH//S
+
+        out = np.zeros(H, W, C*S**2)
+        for h in range(H):
+            for w in range(W):
+                for c in range(C*S**2):
+                    out[h, w, c] = image[h*S + c//S%S, w*S + c%S, 0]
+        
+        return out
+
+    def __getitem__(self, idx):
+        high_res = self.loader(self.paths[idx])
+        high_res = mod_crop(high_res, self.scale)
+
+        # downsample
+        low_res = scipy.ndimage.interpolation.zoom(high_res, 1/self.scale,
+                                                   prefilter=False)
+        
+        # compensate image size due to conv layers
+        #offset = config.SRCNN_PROP_IMG_COMP
+        #high_res = high_res[offset:-offset, offset:-offset]
+
+        # append dummy color channel if needed
+        if len(high_res.shape) == 2:
+            low_res = low_res[:, :, np.newaxis]
+            high_res = high_res[:, :, np.newaxis]
+
+        # subpixel shuffle
+        high_res = self.subpixel_shuffle(high_res)
+        
+        # transform to tensor
+        transform = T.ToTensor()
+        low_res = transform(low_res)
+        high_res = transform(high_res)
+
+        return low_res, high_res
+
+
 
 
 

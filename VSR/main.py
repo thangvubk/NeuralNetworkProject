@@ -94,6 +94,12 @@ def main():
         val_dataset = SRCNN_dataset(root)
         test_dataset = SRCNN_datasaet(root)
         model = SRCNN()
+    elif args.model == 'ESPCN':
+        train_dataset = ESPCN_dataset(root)
+        val_dataset = ESPCN_dataset(root)
+        test_dataset = SRCNN_dataset(root)
+        model = ESPCN()
+
 
     # use train_dataset val_dataset to train and validate the model
     datasets = {

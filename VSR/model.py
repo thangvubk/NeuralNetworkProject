@@ -46,4 +46,18 @@ class SRCNN_proposed(nn.Module):
         x = self.conv5(x)
         return x
 
+class ESPCN(nn.Module):
+    def __init__(self):
+        super(ESPCN, self).__init__()
+        self.offset = 0
+        self.conv1 = nn.Conv2d(1, 64, 5, padding=3)
+        self.conv2 = nn.Conv2d(64, 32, 3, padding=1)
+        self.conv3 = nn.Conv2d(32, 9, 3, padding=1)
+    
+    def forward(self, x):
+        x = F.relu(self.conv1(x))
+        x = F.relu(self.conv2(x))
+        x = self.conv3(x)
+        return x
+
 
