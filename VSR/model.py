@@ -30,10 +30,11 @@ class SRCNN(nn.Module):
                  C1=64, C2=32, C3=1,
                  F1=9, F2=1, F3=5):
         super(SRCNN, self).__init__()
+        self.name = 'SRCNN'
         self.offset = config.SRCNN_IMG_COMP
-        self.conv1 = nn.Conv2d(1, C1, F1) # in, out, kernel
+        self.conv1 = nn.Conv2d(1, C1, F1, padding=4) # in, out, kernel
         self.conv2 = nn.Conv2d(C1, C2, F2)
-        self.conv3 = nn.Conv2d(C2, C3, F3)
+        self.conv3 = nn.Conv2d(C2, C3, F3, padding=2)
     
     def forward(self, x):
         x = F.relu(self.conv1(x))
@@ -61,14 +62,15 @@ class SRCNN_proposed(nn.Module):
 class ESPCN(nn.Module):
     def __init__(self):
         super(ESPCN, self).__init__()
+        self.name = 'ESPCN'
         self.offset = 0
         self.conv1 = nn.Conv2d(1, 64, 5, padding=2)
         self.conv2 = nn.Conv2d(64, 32, 3, padding=1)
         self.conv3 = nn.Conv2d(32, 9, 3, padding=1)
     
     def forward(self, x):
-        x = F.relu(self.conv1(x))
-        x = F.relu(self.conv2(x))
+        x = F.tanh(self.conv1(x))
+        x = F.tanh(self.conv2(x))
         x = self.conv3(x)
         return x
 

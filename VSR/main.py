@@ -4,7 +4,7 @@ import os
 from SR_datasets import DatasetFactory
 from model import ModelFactory
 from solver import Solver
-
+from exporter import Exporter
 description='SRCNN-pytorch implementation'
 
 parser = argparse.ArgumentParser(description=description)
@@ -83,7 +83,10 @@ def main():
     #construct dataset
     root = os.getcwd()
     root = os.path.join(root, 'AugTrain')
-    root_test = ('Test/Set5')
+
+    root_train = ('data/noninterpolation/Train/3x')
+    root_val = ('data/noninterpolation/Train/3x')
+    root_test = ('data/noninterpolation/Test/Set5/3x')
 
     """if args.model == 'SRCNN_proposed':
         train_dataset = SR_dataset(root)
@@ -100,7 +103,7 @@ def main():
         val_dataset = ESPCN_dataset(root)
         test_dataset = SRCNN_dataset(root)
         model = ESPCN()"""
-    dataset_roots = root, root, root_test
+    dataset_roots = root_train, root_val, root_test
     dataset_factory = DatasetFactory()
     train_dataset, val_dataset, test_dataset = dataset_factory.create_dataset(args.model,
                                                                               dataset_roots)
@@ -124,7 +127,9 @@ def main():
         solver.train()
     elif args.phase == 'test':
         print('Testing...')
-        solver.test(test_dataset)
+        _, outputs = solver.test(test_dataset)
+        exporter = Exporter(model.name, args.scale)
+        exporter.export(outputs)
     else:
         print('Training...')
         solver.train()

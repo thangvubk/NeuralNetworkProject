@@ -11,10 +11,19 @@ import config
 from torch.utils.data import Dataset
 DATASETS = 'SR_dataset, SRCNN_dataset, ESPCN_dataset'
 
+
+def rgb2ycbcr(rgb):
+    return np.dot(rgb[...,:3], [65.738/256, 129.057/256, 25.064/256]) + 16
+
 # default loader
 def _gray_loader(path):
-    image = scipy.misc.imread(path, flatten=True, mode='YCbCr').astype(float)
-    return image
+    #image = scipy.misc.imread(path, flatten=False, mode='YCbCr')
+    image = scipy.misc.imread(path)
+    if len(image.shape) == 2:
+        return image
+    return rgb2ycbcr(image)
+
+
 
 # util func
 def _get_img_paths(root):
@@ -138,8 +147,18 @@ class SR_dataset(Dataset):
         
 
 class SRCNN_dataset(SR_dataset):
+    def __init__(self, root, scale=3, loader=_gray_loader):
+        self.loader = loader
+        high_res_root = os.path.join(root, 'high_res')
+        low_res_root = os.path.join(root, 'low_res')
+        self.hs_paths = _get_img_paths(high_res_root)
+        self.ls_paths = _get_img_paths(low_res_root)
+        self.scale = scale
 
-    def __getitem__(self, idx):
+    def __len__(self):
+        return len(self.hs_paths)
+
+    def __getitem__1(self, idx):
         high_res = self.loader(self.paths[idx])
         #high_res = high_res[:50, :50]
         high_res = mod_crop(high_res, self.scale)
@@ -152,7 +171,7 @@ class SRCNN_dataset(SR_dataset):
         # due to non-upsampleing, high_res image size is smaller 
         # than low_res image size, so we have to un-padding high-res
         offset = config.SRCNN_IMG_COMP
-        high_res = high_res[offset:-offset, offset:-offset]
+        #high_res = high_res[offset:-offset, offset:-offset]
 
         # append dummy color channel if needed
         if len(high_res.shape) == 2:
@@ -166,11 +185,34 @@ class SRCNN_dataset(SR_dataset):
         
         return low_res, high_res
 
-class ESPCN_dataset(SR_dataset):
+    def __getitem__(self, idx):
+        high_res = self.loader(self.hs_paths[idx])
+        low_res = self.loader(self.ls_paths[idx])
+        
+        low_res = low_res[:, :, np.newaxis]
+        high_res = high_res[:, :, np.newaxis]
+
+        high_res = mod_crop(high_res, 3)
+        low_res = mod_crop(low_res, 3)
+
+        # transform np image to torch tensor
+        transform = T.ToTensor()
+        low_res = transform(low_res)
+        high_res = transform(high_res)
+
+        low_res = low_res - 0.5
+        high_res = high_res - 0.5
+        
+        return low_res, high_res
+
+
+
+
+class ESPCN_dataset(SRCNN_dataset):
     
-    def subpixel_shuffle(self, img):
+    def subpixel_deshuffle(self, img):
         # convert img of shape (S*H, S*W, C) to (H, W, C*S**2)
-        # just test for gray sclae
+        # just test for gray sclale
         # TODO: test for RBG image
         SH, SW, C = img.shape
         S = self.scale
@@ -185,7 +227,7 @@ class ESPCN_dataset(SR_dataset):
         
         return out
 
-    def __getitem__(self, idx):
+    def __getitem__1(self, idx):
         high_res = self.loader(self.paths[idx])
         high_res = mod_crop(high_res, self.scale)
 
@@ -203,13 +245,36 @@ class ESPCN_dataset(SR_dataset):
             high_res = high_res[:, :, np.newaxis]
         
         # subpixel shuffle
-        high_res = self.subpixel_shuffle(high_res)
+        high_res = self.subpixel_deshuffle(high_res)
         
         # transform to tensor
         transform = T.ToTensor()
         low_res = transform(low_res)
         high_res = transform(high_res)
 
+        return low_res, high_res
+    
+    def __getitem__(self, idx):
+        high_res = self.loader(self.hs_paths[idx])
+        low_res = self.loader(self.ls_paths[idx])
+        
+        low_res = low_res[:, :, np.newaxis]
+        high_res = high_res[:, :, np.newaxis]
+
+        #high_res = mod_crop(high_res, 3)
+        #low_res = mod_crop(low_res, 3)
+
+        high_res = self.subpixel_deshuffle(high_res)
+
+        # transform np image to torch tensor
+        transform = T.ToTensor()
+        low_res = transform(low_res)
+        high_res = transform(high_res)
+
+
+        low_res = low_res - 0.5
+        high_res = high_res - 0.5
+        
         return low_res, high_res
 
 

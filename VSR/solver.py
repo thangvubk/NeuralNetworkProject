@@ -129,6 +129,7 @@ class Solver(object):
                                 shuffle=False, num_workers=4)
         
         avr_psnr = 0
+        outputs = [] 
         for batch, (input_batch, label_batch) in enumerate(dataloader):
             input_batch, label_batch = self._wrap_variable(input_batch,
                                                            label_batch,
@@ -144,6 +145,9 @@ class Solver(object):
             
             # use original image size for testing
             if is_test:
+                np_output = output.cpu().numpy()
+                outputs.append(np_output[0])
+                
                 inp = input_batch.clone().data*255
                 inp = inp.squeeze(dim=1)
                 save_output = output.cpu().numpy()
@@ -151,7 +155,7 @@ class Solver(object):
                 save_input = inp.cpu().numpy()
                 
                 offset = self.model.offset
-                save_input = save_input[:, offset:-offset, offset:-offset]
+                #save_input = save_input[:, offset:-offset, offset:-offset]
                 ########
                 imdiff = (save_label[0] - save_input[0])
 
@@ -167,14 +171,15 @@ class Solver(object):
 
                 psnr = 20*np.log10(255/mse)
                 print('average output psnr', psnr)
+                print(np.max(save_input), np.max(save_label), np.max(save_output))
                 ####
                 
-                scipy.misc.imsave('Result/output_{}.png'.format(batch), 
-                                  save_output[0])
-                scipy.misc.imsave('Result/label_{}.png'.format(batch), 
-                                  save_label[0])
-                scipy.misc.imsave('Result/input_{}.png'.format(batch),
-                                  save_input[0])
+                #scipy.misc.imsave('Results/output_{}.png'.format(batch), 
+                #                  save_output[0])
+                #scipy.misc.imsave('Results/label_{}.png'.format(batch), 
+                #                  save_label[0])
+                #scipy.misc.imsave('Results/input_{}.png'.format(batch),
+                #                  save_input[0])
 
             
             psnr = self._comput_PSNR(output, label)
@@ -183,7 +188,7 @@ class Solver(object):
         epoch_size = len(dataset)
         avr_psnr /= epoch_size
 
-        return avr_psnr
+        return avr_psnr, outputs
 
      
     def train(self):
@@ -191,6 +196,12 @@ class Solver(object):
         Load data form self.datasets and train the network.
         The optimal model is saved in traned_model.pt
         """
+        #model_name = os.path.join('TrainedModel', self.model.name+'.pt')
+       
+        
+        #self.model = torch.load(model_name)
+        #self.optimizer = optim.Adam(self.model.parameters(), lr=5e-5)
+
 
         # load data
         train_loader = DataLoader(self.datasets['train'], batch_size=self.batch_size,
@@ -211,8 +222,8 @@ class Solver(object):
             self._epoch_step(epoch)
             
             # capture running PSNR on train and val dataset
-            train_psnr = self._check_PSNR(self.datasets['train'])
-            val_psnr = self._check_PSNR(self.datasets['val'])
+            train_psnr, _ = self._check_PSNR(self.datasets['train'])
+            val_psnr, _ = self._check_PSNR(self.datasets['val'])
             self.hist_train_psnr.append(train_psnr)
             self.hist_val_psnr.append(val_psnr)
             
@@ -229,7 +240,8 @@ class Solver(object):
         # save the best model to self.model
         self.model.load_state_dict(best_model_state)
         # write the model to hard-disk for testing
-        torch.save(self.model, 'trained_model.pt')
+        model_name = os.path.join('TrainedModel', self.model.name+'.pt')
+        torch.save(self.model, model_name)
 
     def test(self, dataset):
         """
@@ -237,11 +249,13 @@ class Solver(object):
         then return the average PNSR on test samples.
         The cropped-input, output, label images are save on Result/
         """
-        if not os.path.exists('trained_model.pt'):
-            raise Exception('Cannot find trained_model.pt. \
-                             Please train the network first')
+        model_name = os.path.join('TrainedModel', self.model.name+'.pt')
+        if not os.path.exists(model_name):
+            raise Exception('Cannot find %s. \
+                             Please train the network first' %model_name)
         
-        self.model = torch.load('trained_model.pt')
-        test_psnr = self._check_PSNR(dataset, is_test=True, batch_size=1)
+        self.model = torch.load(model_name)
+        test_psnr, outputs = self._check_PSNR(dataset, is_test=True, batch_size=1)
         print('Average test PSNR: %.2fdB' %test_psnr)
+        return test_psnr, outputs
             
