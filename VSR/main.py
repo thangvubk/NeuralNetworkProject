@@ -27,7 +27,7 @@ parser.add_argument('-i', '--input_size', metavar='I', type=int, default=33,
                     value is aligned to the label size and the CNN\
                     architecture, make sure  you understand the network\
                     architecture if you want to change this value')
-parser.add_argument('-l', '--label_size', metavar='L', type=int, default=21,
+parser.add_argument('-k', '--label_size', metavar='L', type=int, default=21,
                     help='size of label subimage used to compute loss in CNN.\
                     The default value is aligned to the input and the CNN\
                     architecture, make sure you understand the network\
@@ -37,8 +37,13 @@ parser.add_argument('-s', '--stride', metavar='S', type=int, default=21,
                     for image subsampleing')
 parser.add_argument('-b', '--batch-size', metavar='B', type=int, default=32,
                     help='batch size used for training')
+parser.add_argument('-l', '--learning-rate', metavar='L', type=float, default=1e-4,
+                    help='learning rate used for training')
 parser.add_argument('-n', '--num-epochs', metavar='N', type=int, default=50,
                     help='number of training epochs')
+parser.add_argument('-f', '--fine-tune', dest='fine_tune', action='store_true',
+                    help='fine tune the model under TrainedModel dir,\
+                    instead of training from scratch')
 parser.add_argument('-v', '--verbose', dest='verbose', action='store_true',
                     help='print training information')
 
@@ -51,6 +56,17 @@ if args.phase not in ['train', 'test', 'both']:
     parser.print_help()
     sys.exit(1)
 
+def get_full_path(scale, is_using_interp, target_path):
+    scale_path = str(scale) + 'x'
+    if is_using_interp:
+        interp_path = 'interpolation'
+    else:
+        interp_path = 'noninterpolation'
+
+    # example: data/interpolation/Test/Set5/3x
+    return os.path.join('data', interp_path, target_path, scale_path)
+    
+
 def main():
     print('############################################################')
     print('# SRCNN Pytorch implementation                             #')
@@ -59,11 +75,11 @@ def main():
     print('')
     print('-------YOUR SETTINGS_________')
     for arg in vars(args):
-        print("%10s: %s" %(str(arg), str(getattr(args, arg))))
+        print("%15s: %s" %(str(arg), str(getattr(args, arg))))
     print('')
 
     # config dataset
-    common_config = {
+    """common_config = {
         'scale': args.scale,
         'is_gray': True,
         'input_size': args.input_size,
@@ -73,20 +89,31 @@ def main():
 
     train_dataset_config = common_config.copy()
     val_dataset_config = common_config.copy()
-    test_dataset_config = common_config.copy()
+    test_dataset_config = common_config.copy()"""
 
-    train_dataset_config['dir_path'] = args.train_path
+    # only SRCNN uses interpolation as the training input
+    if args.model == 'SRCNN':
+        is_using_interp = True
+    else:
+        is_using_interp = False
+
+    
+    root_train = get_full_path(args.scale, is_using_interp, args.train_path)
+    root_val = get_full_path(args.scale, is_using_interp, args.train_path)
+    root_test = get_full_path(args.scale, is_using_interp, args.test_path)
+
+    '''train_dataset_config['dir_path'] = args.train_path
     val_dataset_config['dir_path'] = args.val_path
-    test_dataset_config['dir_path'] = args.test_path
+    test_dataset_config['dir_path'] = args.test_path'''
 
     print('Contructing dataset...')
     #construct dataset
-    root = os.getcwd()
+    '''root = os.getcwd()
     root = os.path.join(root, 'AugTrain')
 
     root_train = ('data/noninterpolation/Train/3x')
     root_val = ('data/noninterpolation/Train/3x')
-    root_test = ('data/noninterpolation/Test/Set5/3x')
+    root_test = ('data/noninterpolation/Test/Set5/3x')'''
 
     """if args.model == 'SRCNN_proposed':
         train_dataset = SR_dataset(root)
@@ -119,12 +146,13 @@ def main():
     }
 
     #model = SRCNN()
-    solver = Solver(model, datasets, batch_size=args.batch_size,
-                    num_epochs=args.num_epochs, verbose=args.verbose)
+    solver = Solver(model, batch_size=args.batch_size,
+                    num_epochs=args.num_epochs, learning_rate=args.learning_rate,
+                    fine_tune=args.fine_tune, verbose=args.verbose)
 
     if args.phase == 'train':
         print('Training...')
-        solver.train()
+        solver.train(train_dataset, val_dataset)
     elif args.phase == 'test':
         print('Testing...')
         _, outputs = solver.test(test_dataset)
@@ -132,7 +160,7 @@ def main():
         exporter.export(outputs)
     else:
         print('Training...')
-        solver.train()
+        solver.train(train_dataset, val_dataset)
         print('Testing...')
         solver.test(test_dataset)
 

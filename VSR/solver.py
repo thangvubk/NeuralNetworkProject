@@ -21,39 +21,40 @@ class Solver(object):
     datasets, and various option (optimizer, loss_fn, batch_size, etc) to the
     constructor.
 
-    After train() method is called, the self.model will be the best model on 
-    validation set. The best model is saved into trained_model.pt, which is used
+    After train() method is called, the 'self.model' will be the best model on 
+    validation set. The best model is saved into 'check_point' dir, which is used
     for the testing time. 
 
-    For statistics, loss history, avr_train_psnr history, andavr_val_psnr history
+    For statistics, 'loss' history, 'avr_train_psnr' history, and 'avr_val_psnr' history
     are also saved. 
     """
-    def __init__(self, model, datasets, **kwargs):
+    def __init__(self, model, **kwargs):
         """
         Construct a new Solver instance
 
         Required arguments
-        - model: a torch nn module describe the neural network architecture
-        - datasets: a dictionary of training and validation data, which are
-        used to pass to DataLoader.
-            'train': training dataset
-            'val': validation dataset
+        - model: a torch nn module describe the neural network architecture 
 
         Optional arguments:
         - num_epochs: number of epochs to run during training
         - batch_size: batch size for train phase
         - optimizer: update rule for model parameters
         - loss_fn: loss function for the model
-        - verbose: print statistics
+        - fine_tune: fine tune the model in check_point dir instead of training 
+                     from scratch
+        - verbose: print training information
         - print_every: period of statistics printing
         """
         self.model = model
-        self.datasets = datasets
+        #self.datasets = datasets
         self.num_epochs = kwargs.pop('num_epochs', 10)
         self.batch_size = kwargs.pop('batch_size', 128)
-        self.optimizer = kwargs.pop('optimizer', 
-                                    optim.Adam(model.parameters(), lr=1e-4))
+        self.learning_rate = kwargs.pop('learning_rate', 1e-4)
+        self.optimizer = kwargs.pop('optimizer', optim.Adam(
+            model.parameters(), 
+            lr=self.learning_rate))
         self.loss_fn = kwargs.pop('loss_fn', nn.MSELoss())
+        self.fine_tune = kwargs.pop('fine_tune', False)
         self.verbose = kwargs.pop('verbose', False)
         self.print_every = kwargs.pop('print_every', 10)
 
@@ -68,11 +69,12 @@ class Solver(object):
         self.hist_val_psnr = []
         self.hist_loss = []
     
-    def _epoch_step(self, epoch):
-        """
-        Perform 1 training epoch
-        """
-        for i, (input_batch, label_batch) in enumerate(self.dataloaders['train']):
+    def _epoch_step(self, dataset, epoch):
+        """ Perform 1 training 'epoch' on the 'dataset'"""
+        dataloader = DataLoader(dataset, batch_size=self.batch_size,
+                                shuffle=True, num_workers=4)
+
+        for i, (input_batch, label_batch) in enumerate(dataloader):
             #Wrap with torch Variable
             input_batch, label_batch = self._wrap_variable(input_batch,
                                                            label_batch,
@@ -107,7 +109,7 @@ class Solver(object):
         return input_batch, label_batch
     
     def _comput_PSNR(self, imgs1, imgs2):
-        """Compute PSNR for gray scale"""
+        """Compute PSNR between two image array and return the psnr summation"""
         # TODO: check for 3 channel image
         N = imgs1.size()[0]
         imdiff = imgs1 - imgs2
@@ -118,18 +120,30 @@ class Solver(object):
         return psnr
 
                 
-    def _check_PSNR(self, dataset, is_test=False, batch_size=32):
+    def _check_PSNR(self, dataset, is_test=False):
         """
-        Compute the PSNR for the dataset at training, validation, and testing time
-        For training, and validation, the images are cropped in to multiple subimages, 
-        but for the testing we use the original size of images.
-        The cropped-input, output, label images are save on Result/
+        Get the output of model with the input being 'dataset' then 
+        compute the PSNR between output and label.
+        
+        if 'is_test' is True, psnr and output of each image is also 
+        return for statistics and generate output image at test phase
         """
+
+        # process one image per iter for test phase
+        if is_test:
+            batch_size = 1
+        else:
+            batch_size = self.batch_size
+
         dataloader = DataLoader(dataset, batch_size=batch_size,
                                 shuffle=False, num_workers=4)
         
         avr_psnr = 0
-        outputs = [] 
+        
+        # book keeping variables for test phase
+        psnrs = [] # psnr for each image
+        outputs = [] # output for each image
+
         for batch, (input_batch, label_batch) in enumerate(dataloader):
             input_batch, label_batch = self._wrap_variable(input_batch,
                                                            label_batch,
@@ -145,8 +159,8 @@ class Solver(object):
             
             # use original image size for testing
             if is_test:
-                np_output = output.cpu().numpy()
-                outputs.append(np_output[0])
+                #np_output = output.cpu().numpy()
+                #outputs.append(np_output[0])
                 
                 inp = input_batch.clone().data*255
                 inp = inp.squeeze(dim=1)
@@ -185,33 +199,37 @@ class Solver(object):
             psnr = self._comput_PSNR(output, label)
             avr_psnr += psnr
             
+            # save psnrs and outputs for statistics and generate image at test time
+            if is_test:
+                psnrs.append(psnr)
+                np_output = output.cpu().numpy()
+                outputs.append(np_output[0])
+
+            
         epoch_size = len(dataset)
         avr_psnr /= epoch_size
 
-        return avr_psnr, outputs
+        return avr_psnr, psnrs, outputs
 
      
-    def train(self):
+    def train(self, train_dataset, val_dataset):
         """
-        Load data form self.datasets and train the network.
-        The optimal model is saved in traned_model.pt
+        Train the 'train_dataset' then use 'val_dataset' for validation,
+        if 'fine_tune' is True, we finetune the model under 'check_point' dir
+        instead of training from scratch.
+
+        The best model on val_dataset is save under checkpoint which is used
+        for test phase or finetuning
         """
-        #model_name = os.path.join('TrainedModel', self.model.name+'.pt')
+
+        # check fine_tuning option
+        model_name = os.path.join('check_point', self.model.name+'.pt')
+        if self.fine_tune and os.path.exists(model_name):
+            if self.verbose:
+                print('Loading %s for finetuning.' %model_name)
+            self.model = torch.load(model_name)
+            self.optimizer = optim.Adam(self.model.parameters(), lr=self.learning_rate)
        
-        
-        #self.model = torch.load(model_name)
-        #self.optimizer = optim.Adam(self.model.parameters(), lr=5e-5)
-
-
-        # load data
-        train_loader = DataLoader(self.datasets['train'], batch_size=self.batch_size,
-                                shuffle=True, num_workers=4)
-        val_loader = DataLoader(self.datasets['val'], batch_size=self.batch_size,
-                                shuffle=False, num_workers=4)
-        self.dataloaders = {
-            'train': train_loader,
-            'val': val_loader
-        }
         
         # capture best model
         best_val_psnr = -1
@@ -219,11 +237,11 @@ class Solver(object):
 
         # Train the model
         for epoch in range(self.num_epochs):
-            self._epoch_step(epoch)
-            
+            self._epoch_step(train_dataset, epoch)
+
             # capture running PSNR on train and val dataset
-            train_psnr, _ = self._check_PSNR(self.datasets['train'])
-            val_psnr, _ = self._check_PSNR(self.datasets['val'])
+            train_psnr, _, _ = self._check_PSNR(train_dataset)
+            val_psnr, _, _ = self._check_PSNR(val_dataset)
             self.hist_train_psnr.append(train_psnr)
             self.hist_val_psnr.append(val_psnr)
             
@@ -232,7 +250,8 @@ class Solver(object):
                 print('Epoch finished')
                 print('Average train PSNR %.3fdB' %train_psnr)
                 print('Average val PNSR %.3fdB' %val_psnr)
-
+            
+            # get the best model from val set
             if best_val_psnr < val_psnr:
                 best_val_psnr = val_psnr
                 best_model_state = self.model.state_dict()
@@ -240,22 +259,21 @@ class Solver(object):
         # save the best model to self.model
         self.model.load_state_dict(best_model_state)
         # write the model to hard-disk for testing
-        model_name = os.path.join('TrainedModel', self.model.name+'.pt')
         torch.save(self.model, model_name)
 
     def test(self, dataset):
         """
         Load the model stored in train_model.pt from training phase,
-        then return the average PNSR on test samples.
-        The cropped-input, output, label images are save on Result/
+        then return the average PNSR on test samples. 
         """
-        model_name = os.path.join('TrainedModel', self.model.name+'.pt')
+        # TODO process psnrs
+        model_name = os.path.join('check_point', self.model.name+'.pt')
         if not os.path.exists(model_name):
-            raise Exception('Cannot find %s. \
+            raise Exception('Cannot find %s.\
                              Please train the network first' %model_name)
         
         self.model = torch.load(model_name)
-        test_psnr, outputs = self._check_PSNR(dataset, is_test=True, batch_size=1)
-        print('Average test PSNR: %.2fdB' %test_psnr)
-        return test_psnr, outputs
+        avr_test_psnr, psnrs, outputs = self._check_PSNR(dataset, is_test=True)
+        print('Average test PSNR: %.2fdB' %avr_test_psnr)
+        return avr_test_psnr, outputs
             
