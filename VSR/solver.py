@@ -5,6 +5,7 @@ import torch.nn as nn
 import numpy as np
 import math
 import scipy.misc
+import progressbar
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
 import os
@@ -46,7 +47,6 @@ class Solver(object):
         - print_every: period of statistics printing
         """
         self.model = model
-        #self.datasets = datasets
         self.num_epochs = kwargs.pop('num_epochs', 10)
         self.batch_size = kwargs.pop('batch_size', 128)
         self.learning_rate = kwargs.pop('learning_rate', 1e-4)
@@ -74,7 +74,17 @@ class Solver(object):
         dataloader = DataLoader(dataset, batch_size=self.batch_size,
                                 shuffle=True, num_workers=4)
 
+        num_batchs = len(dataset)//self.batch_size
+
+        # observe the training progress
+        if self.verbose:
+            bar = progressbar.ProgressBar(max_value=num_batchs)
+
+        running_loss = 0
         for i, (input_batch, label_batch) in enumerate(dataloader):
+            
+            
+
             #Wrap with torch Variable
             input_batch, label_batch = self._wrap_variable(input_batch,
                                                            label_batch,
@@ -89,15 +99,20 @@ class Solver(object):
 
             # save statistic
             self.hist_loss.append(loss.data[0])
-            
-            if self.verbose:
-                if i%self.print_every== 0:
-                    print('epoch %5d iter %5d, loss %.5f' \
-                            %(epoch, i, loss.data[0]))
+            running_loss += loss.data[0]
             
             # Backward + update
             loss.backward()
             self.optimizer.step()
+
+            if self.verbose:
+                bar.update(i, force=True)
+
+        if self.verbose:
+            print('Epoch  %5d, loss %.5f' \
+                        %(epoch, running_loss/num_batchs))
+            
+
 
     def _wrap_variable(self, input_batch, label_batch, use_gpu):
         if use_gpu:
@@ -239,6 +254,9 @@ class Solver(object):
         for epoch in range(self.num_epochs):
             self._epoch_step(train_dataset, epoch)
 
+            if self.verbose:
+                print('Computing PSNR...')
+
             # capture running PSNR on train and val dataset
             train_psnr, _, _ = self._check_PSNR(train_dataset)
             val_psnr, _, _ = self._check_PSNR(val_dataset)
@@ -246,10 +264,9 @@ class Solver(object):
             self.hist_val_psnr.append(val_psnr)
             
             if self.verbose:
-                print('')
-                print('Epoch finished')
                 print('Average train PSNR %.3fdB' %train_psnr)
                 print('Average val PNSR %.3fdB' %val_psnr)
+                print('')
             
             # get the best model from val set
             if best_val_psnr < val_psnr:
