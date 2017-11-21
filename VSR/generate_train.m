@@ -1,13 +1,6 @@
 clear; close all;
 
-%% Test
-% im_rgb = imread('Test/Set5/butterfly_GT.bmp');
-% im_ycbcr = rgb2ycbcr(im_rgb);
-% im_y = im_ycbcr(:, :, 1);
-% im_y = im2double(im_y); % normalize
-% [h, w] = size(im_y);
-% im_ip = imresize(imresize(im_y,1/3,'bicubic'),[h, w],'bicubic');
-% imwrite(im_ip, 'low_res.bmp');
+
 
 %%
 read_path = 'Train';
@@ -18,7 +11,6 @@ stride = 4*scale;
 
 
 %% Create save path for high resolution and low resolution images based on config
-% example: hr_save_path = 'data/noninterpolation/Test/Set14/3x/high_res'
 
 scale_dir = strcat(int2str(scale), 'x');
 if use_upscale_interpolation
@@ -27,6 +19,7 @@ else
     interpolation_dir = 'noninterpolation';
 end
 
+% example: hr_save_path = 'data/noninterpolation/Test/Set14/3x/high_res'
 hr_save_path = fullfile('data', interpolation_dir, read_path, scale_dir, 'high_res');
 lr_save_path = fullfile('data', interpolation_dir, read_path, scale_dir, 'low_res');
 
@@ -72,6 +65,9 @@ for i = 1 : length(filepaths)
 end
 
 %% Utility function (supported in matlab 2016Rb or newer :D)
+% NOTE: if your matlab version is lower than 2016Rb please copy modcrop
+% 	and safe_mkdir to other .m file
+
 function img = modcrop(img, scale)
 % The img size should be divided by scale, to align interpolation
     sz = size(img);
