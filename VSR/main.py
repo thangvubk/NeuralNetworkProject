@@ -57,7 +57,7 @@ def get_full_path(scale, is_using_interp, target_path):
         interp_path = 'interpolation'
     else:
         interp_path = 'noninterpolation'
-    return os.path.join('data', interp_path, target_path, scale_path)
+    return os.path.join('preprocessed_data', interp_path, target_path, scale_path)
     
 def display_config():
     print('############################################################')

@@ -1,11 +1,13 @@
 clear; close all;
 
-%%
+%% Configurationi
+% NOTE: you can modify this part
 read_path = 'Test/Set5';
 scale = 3;
 use_upscale_interpolation = false;
 
 %% Create save path for high resolution and low resolution images based on config
+% NOTE: you should NOT modify the following parts
 
 scale_dir = strcat(int2str(scale), 'x');
 
@@ -16,8 +18,8 @@ else
 end
 
 % example: hr_save_path = 'data/interpolation/Test/Set14/3x/high_res'
-hr_save_path = fullfile('data', interpolation_dir, read_path, scale_dir, 'high_res');
-lr_save_path = fullfile('data', interpolation_dir, read_path, scale_dir, 'low_res');
+hr_save_path = fullfile('preprocessed_data', interpolation_dir, read_path, scale_dir, 'high_res');
+lr_save_path = fullfile('preprocessed_data', interpolation_dir, read_path, scale_dir, 'low_res');
 
 safe_mkdir(hr_save_path);
 safe_mkdir(lr_save_path);

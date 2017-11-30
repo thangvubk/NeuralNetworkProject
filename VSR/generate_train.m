@@ -1,8 +1,7 @@
 clear; close all;
 
-
-
-%%
+%% Configuration 
+% NOTE: you can modify this part
 read_path = 'Train';
 scale = 3;
 use_upscale_interpolation = false;
@@ -11,6 +10,7 @@ stride = 4*scale;
 
 
 %% Create save path for high resolution and low resolution images based on config
+% NOTE: you should NOT modify the following parts
 
 scale_dir = strcat(int2str(scale), 'x');
 if use_upscale_interpolation
