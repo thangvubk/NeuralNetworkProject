@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
+import math
 import config
 MODELS = ['SRCNN', 'ESPCN', 'DCNN']
 
@@ -84,10 +85,25 @@ class DCNN(nn.Module):
         self.conv_next = nn.Conv2d(64, 64, 3, padding=1)
         self.conv_last = nn.Conv2d(64, 1, 3, padding=1)
 
+        # xavier initialization
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d):
+                n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
+                m.weight.data.normal_(0, math.sqrt(2. / n))
+
+    def _res_layer(self, x):
+        res = x
+        out = F.relu(self.conv_next(x))
+        out = self.conv_next(out)
+        out += res
+        out = F.relu(out)
+        return out
+
     def forward(self, x):
         x = F.relu(self.conv_first(x))
-        for _ in range(5):
-            x = F.relu(self.conv_next(x))
+        x = self._res_layer(x)
+        x = self._res_layer(x)
+        x = self._res_layer(x)
         x = self.conv_last(x)
         return x
 
