@@ -39,7 +39,7 @@ parser.add_argument('-v', '--verbose', dest='verbose', action='store_true',
 
 args = parser.parse_args()
 
-if args.phase not in ['train', 'test', 'both']:
+if args.phase not in ['train', 'test']:
     print('ERROR!!!')
     print('"Phase" must be "train" or "test"')
     print('')
@@ -105,11 +105,6 @@ def main():
         psnrs, outputs = solver.test(test_dataset)
         exporter = Exporter(model.name, args.scale)
         exporter.export(psnrs, outputs)
-    else:
-        print('Training...')
-        solver.train(train_dataset, val_dataset)
-        print('Testing...')
-        solver.test(test_dataset)
 
 if __name__ == '__main__':
     main()

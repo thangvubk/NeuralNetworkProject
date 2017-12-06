@@ -1,6 +1,7 @@
 from __future__ import division
 import torch
 import torch.optim as optim
+import torch.optim.lr_scheduler as lr_scheduler
 import torch.nn as nn
 import numpy as np
 import math
@@ -50,9 +51,10 @@ class Solver(object):
         self.num_epochs = kwargs.pop('num_epochs', 10)
         self.batch_size = kwargs.pop('batch_size', 128)
         self.learning_rate = kwargs.pop('learning_rate', 1e-4)
-        self.optimizer = kwargs.pop('optimizer', optim.Adam(
+        self.optimizer = optim.Adam(
             model.parameters(), 
-            lr=self.learning_rate))
+            lr=self.learning_rate)
+        self.scheduler = lr_scheduler.StepLR(self.optimizer, step_size=20, gamma=0.5)
         self.loss_fn = kwargs.pop('loss_fn', nn.MSELoss())
         self.fine_tune = kwargs.pop('fine_tune', False)
         self.verbose = kwargs.pop('verbose', False)
@@ -214,28 +216,20 @@ class Solver(object):
         # Train the model
         for epoch in range(self.num_epochs):
             self._epoch_step(train_dataset, epoch)
+            self.scheduler.step()
 
             if self.verbose:
                 print('Computing PSNR...')
 
             # capture running PSNR on train and val dataset
             train_psnr, _, _ = self._check_PSNR(train_dataset)
-            val_psnr, _, _ = self._check_PSNR(val_dataset)
             self.hist_train_psnr.append(train_psnr)
-            self.hist_val_psnr.append(val_psnr)
             
             if self.verbose:
                 print('Average train PSNR %.3fdB' %train_psnr)
-                print('Average val PNSR %.3fdB' %val_psnr)
                 print('')
             
-            # get the best model from val set
-            if best_val_psnr < val_psnr:
-                best_val_psnr = val_psnr
-                best_model_state = self.model.state_dict()
-
-        # save the best model to self.model
-        self.model.load_state_dict(best_model_state)
+            
         # write the model to hard-disk for testing
         torch.save(self.model, model_name)
 

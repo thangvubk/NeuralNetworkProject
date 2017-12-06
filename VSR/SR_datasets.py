@@ -46,41 +46,7 @@ class DatasetFactory(object):
         elif name == 'ESPCN':
             return ESPCN_dataset(train_root, scale), ESPCN_dataset(val_root, scale), ESPCN_dataset(test_root, scale)
 
-class SR_dataset(Dataset):
-    def __init__(self, root, scale=3, loader=_gray_loader):
-        self.loader = loader
-        self.paths = _get_img_paths(root)
-        self.scale = scale
-
-    def __len__(self):
-        return len(self.paths)
-
-    def __getitem__(self, idx):
-        high_res = self.loader(self.paths[idx])
-        high_res = mod_crop(high_res, self.scale)
-
-        # downsample
-        low_res = scipy.ndimage.interpolation.zoom(high_res, 1/self.scale,
-                                                   prefilter=False)
-        
-        # compensate image size due to conv layers
-        offset = config.SRCNN_PROP_IMG_COMP
-        high_res = high_res[offset:-offset, offset:-offset]
-
-        # append dummy color channel if needed
-        if len(high_res.shape) == 2:
-            low_res = low_res[:, :, np.newaxis]
-            high_res = high_res[:, :, np.newaxis]
-        
-        # transform to tensor
-        transform = T.ToTensor()
-        low_res = transform(low_res)
-        high_res = transform(high_res)
-
-        return low_res, high_res
-        
-
-class SRCNN_dataset(SR_dataset):
+class SRCNN_dataset(Dataset):
     def __init__(self, root, scale=3, loader=_gray_loader):
         self.loader = loader
         high_res_root = os.path.join(root, 'high_res')
@@ -107,20 +73,17 @@ class SRCNN_dataset(SR_dataset):
         low_res = transform(low_res)
         high_res = transform(high_res)
 
+        # normalize
         low_res = low_res - 0.5
         high_res = high_res - 0.5
         
         return low_res, high_res
 
 
-
-
 class ESPCN_dataset(SRCNN_dataset):
     
     def subpixel_deshuffle(self, img):
         # convert img of shape (S*H, S*W, C) to (H, W, C*S**2)
-        # just test for gray sclale
-        # TODO: test for RBG image
         SH, SW, C = img.shape
         S = self.scale
         W = SW//S
@@ -140,9 +103,6 @@ class ESPCN_dataset(SRCNN_dataset):
         
         low_res = low_res[:, :, np.newaxis]
         high_res = high_res[:, :, np.newaxis]
-
-        #high_res = mod_crop(high_res, 3)
-        #low_res = mod_crop(low_res, 3)
 
         high_res = self.subpixel_deshuffle(high_res)
 
