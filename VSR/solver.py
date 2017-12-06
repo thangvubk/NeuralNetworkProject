@@ -172,45 +172,6 @@ class Solver(object):
             output = output.squeeze(dim=1)
             label = label.squeeze(dim=1)
             
-            # use original image size for testing
-            if is_test:
-                #np_output = output.cpu().numpy()
-                #outputs.append(np_output[0])
-                
-                inp = input_batch.clone().data*255
-                inp = inp.squeeze(dim=1)
-                save_output = output.cpu().numpy()
-                save_label = label.cpu().numpy()
-                save_input = inp.cpu().numpy()
-                
-                offset = self.model.offset
-                #save_input = save_input[:, offset:-offset, offset:-offset]
-                ########
-                imdiff = (save_label[0] - save_input[0])
-
-                mse = np.sqrt(np.mean(imdiff**2))
-
-                psnr = 20*np.log10(255/mse)
-                print('average input pnsr', psnr)
-
-                imdiff = (save_label[0] - save_output[0])
-
-                #mse = np.linalg.norm(imdiff)
-                mse = np.sqrt(np.mean(imdiff**2))
-
-                psnr = 20*np.log10(255/mse)
-                print('average output psnr', psnr)
-                print(np.max(save_input), np.max(save_label), np.max(save_output))
-                ####
-                
-                #scipy.misc.imsave('Results/output_{}.png'.format(batch), 
-                #                  save_output[0])
-                #scipy.misc.imsave('Results/label_{}.png'.format(batch), 
-                #                  save_label[0])
-                #scipy.misc.imsave('Results/input_{}.png'.format(batch),
-                #                  save_input[0])
-
-            
             psnr = self._comput_PSNR(output, label)
             avr_psnr += psnr
             
@@ -290,7 +251,6 @@ class Solver(object):
                              Please train the network first' %model_name)
         
         self.model = torch.load(model_name)
-        avr_test_psnr, psnrs, outputs = self._check_PSNR(dataset, is_test=True)
-        print('Average test PSNR: %.2fdB' %avr_test_psnr)
-        return avr_test_psnr, outputs
+        _, psnrs, outputs = self._check_PSNR(dataset, is_test=True)
+        return psnrs, outputs
             

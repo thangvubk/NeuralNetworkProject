@@ -25,7 +25,7 @@ class Exporter(object):
             
         
 
-    def export(self, outputs):
+    def export(self, psnrs, outputs):
         if self.model_name == 'ESPCN':
             outputs = self._ESPCN_shuffle(outputs)
         
@@ -33,5 +33,11 @@ class Exporter(object):
             img_name = os.path.join('Results', self.model_name, 
                                     self.model_name+'_output%03d.png'%i)
             scipy.misc.imsave(img_name, img)
+
+        for i, psnr in enumerate(psnrs):
+            print('Psnr img%d: %.3f' %(i, psnr))
+
+        print('Average test psnr: %.3f' %np.mean(psnrs))
+        print('Finish!!!')
 
         

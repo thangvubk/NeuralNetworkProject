@@ -74,8 +74,7 @@ def display_config():
 def main():
     display_config()
 
-    # only SRCNN uses interpolation as the training input
-    if args.model == 'SRCNN':
+    if args.model == 'SRCNN' or 'DCNN':
         is_using_interp = True
     else:
         is_using_interp = False
@@ -103,9 +102,9 @@ def main():
         solver.train(train_dataset, val_dataset)
     elif args.phase == 'test':
         print('Testing...')
-        _, outputs = solver.test(test_dataset)
+        psnrs, outputs = solver.test(test_dataset)
         exporter = Exporter(model.name, args.scale)
-        exporter.export(outputs)
+        exporter.export(psnrs, outputs)
     else:
         print('Training...')
         solver.train(train_dataset, val_dataset)
