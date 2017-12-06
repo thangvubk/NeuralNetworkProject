@@ -103,6 +103,12 @@ class DCNN(nn.Module):
         x = F.relu(self.conv_first(x))
         x = self._res_layer(x)
         x = self._res_layer(x)
+        x = self._res_layer(x)  
+        x = self._res_layer(x)
+        x = self._res_layer(x)
+        x = self._res_layer(x)
+        x = self._res_layer(x)
+        x = self._res_layer(x)
         x = self._res_layer(x)
         x = self.conv_last(x)
         return x
