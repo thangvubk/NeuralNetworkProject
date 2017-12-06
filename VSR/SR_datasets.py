@@ -23,8 +23,6 @@ def _gray_loader(path):
         return image
     return rgb2ycbcr(image)
 
-
-
 # util func
 def _get_img_paths(root):
     paths = glob.glob(os.path.join(root, '*.bmp'))
@@ -37,76 +35,12 @@ def mod_crop(image, scale):
     w = w - np.mod(w, scale)
     return image[:h, :w]
 
-class DataAugment(object):
-    
-    def __init__(self, root, aug_root='AugTrain', size=33, stride=33):
-        self.root = root
-        self.size = size
-        self.stride = stride
-        self.aug_root = aug_root
-        
-
-    def slicing_image(self, img, size=33, stride=33):
-        """
-        Slice inp image (low resolution) to obtain multiple sub-image of size (kernel x kernel)
-        with the step being stride
-        
-        Args:
-            - inp: input image (low resolution)
-            - label: image of high resolution
-            - I: filter size of to slice inp
-            - L: filter size to slice label
-            - stride: step size to move filter
-        Return
-            - sub_inputs: sub-images from inp
-            - sub_labels: sub_images from label
-        """
-        sub_imgs = []
-        h, w = img.shape[0], img.shape[1]
-        
-        for hh in range(0, h-size+1, stride):
-            for ww in range(0, w-size+1, stride):
-                sub_img = img[hh:hh+size, ww:ww+size]
-
-                # Make channel value
-                #sub_input = sub_input.reshape(I, I, 1)
-                sub_imgs.append(sub_img)
-        return sub_imgs
-
-    def empty_augment_folder(self):
-        if os.path.exists(self.aug_root):
-            for root, _, paths in os.walk(self.aug_root):
-                for path in paths:
-                    os.remove(os.path.join(root, path))
-        else:
-            os.mkdir(self.aug_root)
-
-        
-
-    def augment(self):
-
-        self.empty_augment_folder()
-
-        sub_imgs = []
-        paths = _get_img_paths(self.root)
-
-        img_count = 0
-        for path in paths:
-            img = scipy.misc.imread(path)
-            sub_imgs = self.slicing_image(img, self.size, self.stride)
-            
-            for sub_img in sub_imgs:
-                scipy.misc.imsave(self.aug_root+'/%04d.bmp' %img_count, 
-                                  sub_img.astype(np.uint8))
-                img_count += 1
-            
-
 class DatasetFactory(object):
 
     def create_dataset(self, name, roots, scale=3):
         train_root, val_root, test_root = roots
-        if name == 'SR_dataset':
-            return SR_dataset(train_root, scale), SR_dataset(val_root, scale), SR_dataset(test_root, scale)
+        if name == 'DCNN':
+            return SRCNN_dataset(train_root, scale), SRCNN_dataset(val_root, scale), SRCNN_dataset(test_root, scale)
         elif name == 'SRCNN':
             return SRCNN_dataset(train_root, scale), SRCNN_dataset(val_root, scale), SRCNN_dataset(test_root, scale)
         elif name == 'ESPCN':
@@ -158,33 +92,6 @@ class SRCNN_dataset(SR_dataset):
     def __len__(self):
         return len(self.hs_paths)
 
-    def __getitem__1(self, idx):
-        high_res = self.loader(self.paths[idx])
-        #high_res = high_res[:50, :50]
-        high_res = mod_crop(high_res, self.scale)
-
-        # bicubic interpolation
-        low_res = scipy.ndimage.interpolation.zoom(high_res, 1/self.scale, 
-                                                   prefilter=False)
-        low_res = scipy.ndimage.interpolation.zoom(low_res, self.scale, 
-                                                   prefilter=False)
-        # due to non-upsampleing, high_res image size is smaller 
-        # than low_res image size, so we have to un-padding high-res
-        offset = config.SRCNN_IMG_COMP
-        #high_res = high_res[offset:-offset, offset:-offset]
-
-        # append dummy color channel if needed
-        if len(high_res.shape) == 2:
-            low_res = low_res[:, :, np.newaxis]
-            high_res = high_res[:, :, np.newaxis]
-
-        # transform np image to torch tensor
-        transform = T.ToTensor()
-        low_res = transform(low_res)
-        high_res = transform(high_res)
-        
-        return low_res, high_res
-
     def __getitem__(self, idx):
         high_res = self.loader(self.hs_paths[idx])
         low_res = self.loader(self.ls_paths[idx])
@@ -226,33 +133,6 @@ class ESPCN_dataset(SRCNN_dataset):
                     out[h, w, c] = img[h*S + c//S%S, w*S + c%S, 0]
         
         return out
-
-    def __getitem__1(self, idx):
-        high_res = self.loader(self.paths[idx])
-        high_res = mod_crop(high_res, self.scale)
-
-        # downsample
-        low_res = scipy.ndimage.interpolation.zoom(high_res, 1/self.scale,
-                                                   prefilter=False)
-        
-        # compensate image size due to conv layers
-        #offset = config.SRCNN_PROP_IMG_COMP
-        #high_res = high_res[offset:-offset, offset:-offset]
-
-        # append dummy color channel if needed
-        if len(high_res.shape) == 2:
-            low_res = low_res[:, :, np.newaxis]
-            high_res = high_res[:, :, np.newaxis]
-        
-        # subpixel shuffle
-        high_res = self.subpixel_deshuffle(high_res)
-        
-        # transform to tensor
-        transform = T.ToTensor()
-        low_res = transform(low_res)
-        high_res = transform(high_res)
-
-        return low_res, high_res
     
     def __getitem__(self, idx):
         high_res = self.loader(self.hs_paths[idx])

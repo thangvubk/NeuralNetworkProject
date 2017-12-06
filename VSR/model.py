@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 import config
-MODELS = ['SRCNN', 'ESPCN']
+MODELS = ['SRCNN', 'ESPCN', 'DCNN']
 
 class ModelFactory(object):
     
@@ -14,6 +14,8 @@ class ModelFactory(object):
             return SRCNN()
         elif model_name == 'ESPCN':
             return ESPCN()
+        elif model_name == 'DCNN':
+            return DCNN()
 
 
 class SRCNN(nn.Module):
@@ -73,5 +75,21 @@ class ESPCN(nn.Module):
         x = F.tanh(self.conv2(x))
         x = self.conv3(x)
         return x
+
+class DCNN(nn.Module):
+    def __init__(self):
+        super(DCNN, self).__init__()
+        self.name = 'DCNN'
+        self.conv_first = nn.Conv2d(1, 64, 3, padding=1)
+        self.conv_next = nn.Conv2d(64, 64, 3, padding=1)
+        self.conv_last = nn.Conv2d(64, 1, 3, padding=1)
+
+    def forward(self, x):
+        x = F.relu(self.conv_first(x))
+        for _ in range(5):
+            x = F.relu(self.conv_next(x))
+        x = self.conv_last(x)
+        return x
+
 
 
