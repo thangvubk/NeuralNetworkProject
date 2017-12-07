@@ -4,3 +4,5 @@ preprocessed_data_video
 Results
 test
 train
+*.m~
+check_point
