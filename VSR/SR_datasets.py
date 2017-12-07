@@ -6,10 +6,12 @@ import glob
 import scipy.misc
 import scipy.ndimage
 import numpy as np
+import h5py
+import torch
 
 import config
 from torch.utils.data import Dataset
-DATASETS = 'SR_dataset, SRCNN_dataset, ESPCN_dataset'
+#DATASETS = 'SR_dataset, SRCNN_dataset, ESPCN_dataset'
 
 
 def rgb2ycbcr(rgb):
@@ -38,13 +40,15 @@ def mod_crop(image, scale):
 class DatasetFactory(object):
 
     def create_dataset(self, name, roots, scale=3):
-        train_root, val_root, test_root = roots
-        if name == 'DCNN':
-            return SRCNN_dataset(train_root, scale), SRCNN_dataset(val_root, scale), SRCNN_dataset(test_root, scale)
-        elif name == 'SRCNN':
-            return SRCNN_dataset(train_root, scale), SRCNN_dataset(val_root, scale), SRCNN_dataset(test_root, scale)
+        train_root, test_root = roots
+        if name == 'VDCNN':
+            return VSRCNN_dataset(train_root), VSRCNN_dataset(test_root)
+        elif name == 'VSRCNN':
+            return VSRCNN_dataset(train_root), VSRCNN_dataset(test_root)
         elif name == 'ESPCN':
-            return ESPCN_dataset(train_root, scale), ESPCN_dataset(val_root, scale), ESPCN_dataset(test_root, scale)
+            return ESPCN_dataset(train_root), ESPCN_dataset(test_root)
+        elif name == 'VRES':
+            return VDCN_dataset(train_root), VDCN_dataset(test_root)
 
 class SRCNN_dataset(Dataset):
     def __init__(self, root, scale=3, loader=_gray_loader):
@@ -78,6 +82,63 @@ class SRCNN_dataset(Dataset):
         high_res = high_res - 0.5
         
         return low_res, high_res
+
+class VDCN_dataset(Dataset):
+    def __init__(self, root):
+        
+        root = os.path.join(root, 'dataset.h5')
+        f = h5py.File(root)
+        self.low_res_imgs = f.get('data')
+        self.high_res_imgs = f.get('label')
+
+        self.low_res_imgs = np.array(self.low_res_imgs)
+        self.high_res_imgs = np.array(self.high_res_imgs)
+
+    def __len__(self):
+        return self.high_res_imgs.shape[0]
+
+    def __getitem__(self, idx):
+        center = 2
+
+        low_res_imgs = self.low_res_imgs[idx]
+        high_res_imgs = self.high_res_imgs[idx]
+        
+        # h5 in matlab is (H, W, C)
+        # h5 in python is (C, W, H)
+        # we need to transpose to (C, H, W)
+        low_res_imgs = low_res_imgs.transpose(0, 2, 1)
+        high_res_imgs = high_res_imgs.transpose(0, 2, 1)
+
+        # transform np image to torch tensor
+        low_res_imgs = torch.Tensor(low_res_imgs)
+        high_res_imgs = torch.Tensor(high_res_imgs)
+
+        return low_res_imgs, high_res_imgs[center]
+
+class VSRCNN_dataset(VDCN_dataset):
+    def __getitem__(self, idx):
+        center = 2
+        low_res_imgs = self.low_res_imgs[idx]
+        high_res_imgs = self.high_res_imgs[idx]
+        
+        # h5 in matlab is (H, W, C)
+        # h5 in python is (C, W, H)
+        # we need to transpose to (C, H, W)
+        low_res_imgs = low_res_imgs.transpose(0, 2, 1)
+        high_res_imgs = high_res_imgs.transpose(0, 2, 1)
+
+        low_res_img = low_res_imgs[center]
+        high_res_img = high_res_imgs[center]
+
+        low_res_img = low_res_img[np.newaxis, :, :]
+        high_res_img = high_res_img[np.newaxis, :, :]
+
+        # transform np image to torch tensor
+        low_res_img = torch.Tensor(low_res_img)
+        high_res_img = torch.Tensor(high_res_img)
+        
+
+        return low_res_img, high_res_img
 
 
 class ESPCN_dataset(SRCNN_dataset):
@@ -116,6 +177,8 @@ class ESPCN_dataset(SRCNN_dataset):
         high_res = high_res - 0.5
         
         return low_res, high_res
+
+
 
 
 

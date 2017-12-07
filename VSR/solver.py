@@ -190,13 +190,13 @@ class Solver(object):
         return avr_psnr, psnrs, outputs
 
      
-    def train(self, train_dataset, val_dataset):
+    def train(self, train_dataset):
         """
-        Train the 'train_dataset' then use 'val_dataset' for validation,
+        Train the 'train_dataset',
         if 'fine_tune' is True, we finetune the model under 'check_point' dir
         instead of training from scratch.
 
-        The best model on val_dataset is save under checkpoint which is used
+        The best model is save under checkpoint which is used
         for test phase or finetuning
         """
 

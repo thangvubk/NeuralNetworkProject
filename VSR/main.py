@@ -16,13 +16,10 @@ parser.add_argument('-m', '--model', metavar='M', type=str, default='SRCNN_propo
                     help='network architecture')
 parser.add_argument('-c', '--scale', metavar='S', type=int, default=3, 
                     help='interpolation scale')
-parser.add_argument('--train-path', metavar='PATH', type=str, default='Train',
+parser.add_argument('--train-path', metavar='PATH', type=str, default='train',
                     help='accompanied with other config (scale, interp)\
                     to create full path of train data')
-parser.add_argument('--val-path', metavar='PATH', type=str, default='Test/Set14',
-                    help='accompanied with other configs (scale, interp)\
-                    to create full path of val data')
-parser.add_argument('--test-path', metavar='PATH', type=str, default='Test/Set5',
+parser.add_argument('--test-path', metavar='PATH', type=str, default='test',
                     help='accompanied with other configs (scale, interp)\
                     to create full path of test data')
 parser.add_argument('-b', '--batch-size', metavar='B', type=int, default=32,
@@ -57,7 +54,7 @@ def get_full_path(scale, is_using_interp, target_path):
         interp_path = 'interpolation'
     else:
         interp_path = 'noninterpolation'
-    return os.path.join('preprocessed_data', interp_path, target_path, scale_path)
+    return os.path.join('preprocessed_data_video', target_path, interp_path, scale_path)
     
 def display_config():
     print('############################################################')
@@ -74,21 +71,20 @@ def display_config():
 def main():
     display_config()
 
-    if args.model == 'SRCNN' or 'DCNN':
+    if args.model == 'VSRCNN' or 'VDCNN' or 'VRES':
         is_using_interp = True
     else:
         is_using_interp = False
 
     # get full path bases on config and target path
     root_train = get_full_path(args.scale, is_using_interp, args.train_path)
-    root_val = get_full_path(args.scale, is_using_interp, args.train_path)
     root_test = get_full_path(args.scale, is_using_interp, args.test_path)
 
     print('Contructing dataset...')
-    dataset_roots = root_train, root_val, root_test
+    dataset_roots = root_train, root_test
     dataset_factory = DatasetFactory()
-    train_dataset, val_dataset, test_dataset = dataset_factory.create_dataset(args.model,
-                                                                              dataset_roots)
+    train_dataset, test_dataset = dataset_factory.create_dataset(args.model,
+                                                                 dataset_roots)
 
     model_factory = ModelFactory()
     model = model_factory.create_model(args.model)
@@ -99,7 +95,7 @@ def main():
 
     if args.phase == 'train':
         print('Training...')
-        solver.train(train_dataset, val_dataset)
+        solver.train(train_dataset)
     elif args.phase == 'test':
         print('Testing...')
         psnrs, outputs = solver.test(test_dataset)
