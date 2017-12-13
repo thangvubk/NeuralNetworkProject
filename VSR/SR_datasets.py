@@ -42,13 +42,19 @@ class DatasetFactory(object):
     def create_dataset(self, name, roots, scale=3):
         train_root, test_root = roots
         if name == 'VDCNN':
-            return VSRCNN_dataset(train_root), VSRCNN_dataset(test_root)
+            return VDCNN_dataset(train_root), VDCNN_dataset(test_root)
         elif name == 'VSRCNN':
             return VSRCNN_dataset(train_root), VSRCNN_dataset(test_root)
         elif name == 'ESPCN':
             return ESPCN_dataset(train_root), ESPCN_dataset(test_root)
         elif name == 'VRES':
-            return VDCN_dataset(train_root), VDCN_dataset(test_root)
+            return VRES_dataset(train_root), VRES_dataset(test_root)
+        elif name == 'VDSR':
+            return VDSR_dataset(train_root), VDSR_dataset(test_root)
+        elif name == 'VRNET':
+            return VRNET_dataset(train_root), VRNET_dataset(test_root)
+        elif name == 'MFCNN':
+            return MFCNN_dataset(train_root), MFCNN_dataset(test_root)
 
 class SRCNN_dataset(Dataset):
     def __init__(self, root, scale=3, loader=_gray_loader):
@@ -83,7 +89,7 @@ class SRCNN_dataset(Dataset):
         
         return low_res, high_res
 
-class VDCN_dataset(Dataset):
+class VRES_dataset(Dataset):
     def __init__(self, root):
         
         root = os.path.join(root, 'dataset.h5')
@@ -109,13 +115,19 @@ class VDCN_dataset(Dataset):
         low_res_imgs = low_res_imgs.transpose(0, 2, 1)
         high_res_imgs = high_res_imgs.transpose(0, 2, 1)
 
+        high_res_img = high_res_imgs[center]
+        high_res_img = high_res_img[np.newaxis, :, :]
+
+        low_res_imgs -= 0.5
+        high_res_img -= 0.5
+
         # transform np image to torch tensor
         low_res_imgs = torch.Tensor(low_res_imgs)
-        high_res_imgs = torch.Tensor(high_res_imgs)
+        high_res_img = torch.Tensor(high_res_img)
 
-        return low_res_imgs, high_res_imgs[center]
+        return low_res_imgs, high_res_img
 
-class VSRCNN_dataset(VDCN_dataset):
+class VSRCNN_dataset(VRES_dataset):
     def __getitem__(self, idx):
         center = 2
         low_res_imgs = self.low_res_imgs[idx]
@@ -133,6 +145,9 @@ class VSRCNN_dataset(VDCN_dataset):
         low_res_img = low_res_img[np.newaxis, :, :]
         high_res_img = high_res_img[np.newaxis, :, :]
 
+        low_res_img -= 0.5
+        high_res_img -= 0.5
+
         # transform np image to torch tensor
         low_res_img = torch.Tensor(low_res_img)
         high_res_img = torch.Tensor(high_res_img)
@@ -140,6 +155,17 @@ class VSRCNN_dataset(VDCN_dataset):
 
         return low_res_img, high_res_img
 
+class VDSR_dataset(VSRCNN_dataset):
+    pass
+
+class VDCNN_dataset(VSRCNN_dataset):
+    pass
+
+class VRNET_dataset(VRES_dataset):
+    pass
+
+class MFCNN_dataset(VRES_dataset):
+    pass
 
 class ESPCN_dataset(SRCNN_dataset):
     

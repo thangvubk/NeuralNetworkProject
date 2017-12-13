@@ -4,7 +4,7 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 import math
 import config
-MODELS = ['VSRCNN', 'ESPCN', 'DCNN', 'VRES']
+MODELS = ['VSRCNN', 'ESPCN', 'VDCNN', 'VRES', 'VDSR', 'VRNET', 'MFCNN']
 
 class ModelFactory(object):
     
@@ -19,7 +19,12 @@ class ModelFactory(object):
             return VDCNN()
         elif model_name == 'VRES':
             return VRES()
-
+        elif model_name == 'VDSR':
+            return VDSR()
+        elif model_name == 'VRNET':
+            return VRNET()
+        elif model_name == 'MFCNN':
+            return MFCNN()
 
 class VSRCNN(nn.Module):
     """
@@ -36,10 +41,9 @@ class VSRCNN(nn.Module):
                  F1=9, F2=1, F3=5):
         super(VSRCNN, self).__init__()
         self.name = 'VSRCNN'
-        self.offset = config.SRCNN_IMG_COMP
-        self.conv1 = nn.Conv2d(1, C1, F1, padding=4) # in, out, kernel
+        self.conv1 = nn.Conv2d(1, C1, F1, padding=4, bias=False) # in, out, kernel
         self.conv2 = nn.Conv2d(C1, C2, F2)
-        self.conv3 = nn.Conv2d(C2, C3, F3, padding=2)
+        self.conv3 = nn.Conv2d(C2, C3, F3, padding=2, bias=False)
     
     def forward(self, x):
         x = F.relu(self.conv1(x))
@@ -51,7 +55,6 @@ class ESPCN(nn.Module):
     def __init__(self):
         super(ESPCN, self).__init__()
         self.name = 'ESPCN'
-        self.offset = 0
         self.conv1 = nn.Conv2d(1, 64, 5, padding=2)
         self.conv2 = nn.Conv2d(64, 32, 3, padding=1)
         self.conv3 = nn.Conv2d(32, 9, 3, padding=1)
@@ -64,11 +67,11 @@ class ESPCN(nn.Module):
 
 class VDCNN(nn.Module):
     def __init__(self):
-        super(DCNN, self).__init__()
+        super(VDCNN, self).__init__()
         self.name = 'VDCNN'
-        self.conv_first = nn.Conv2d(1, 64, 3, padding=1)
-        self.conv_next = nn.Conv2d(64, 64, 3, padding=1)
-        self.conv_last = nn.Conv2d(64, 1, 3, padding=1)
+        self.conv_first = nn.Conv2d(1, 64, 3, padding=1, bias=False)
+        self.conv_next = nn.Conv2d(64, 64, 3, padding=1, bias=False)
+        self.conv_last = nn.Conv2d(64, 1, 3, padding=1, bias=False)
 
         # xavier initialization
         for m in self.modules():
@@ -100,17 +103,37 @@ class VDCNN(nn.Module):
         out = self._res_layer(out)
         out = self._res_layer(out)
         out = self._res_layer(out)
-        out += res
+        out = self._res_layer(out)
+        out = self._res_layer(out)
+
+        #out = F.relu(self.conv_next(out))
+        #out = F.relu(self.conv_next(out))
+        #out = F.relu(self.conv_next(out))
+        #out = F.relu(self.conv_next(out))
+        #out = F.relu(self.conv_next(out))
+        #out = F.relu(self.conv_next(out))
+        #out = F.relu(self.conv_next(out))
+        #out = F.relu(self.conv_next(out))
+        #out = F.relu(self.conv_next(out))
+        #out = F.relu(self.conv_next(out))
+        #out = F.relu(self.conv_next(out))
+        #out = F.relu(self.conv_next(out))
+        #out = F.relu(self.conv_next(out))
+        #out = F.relu(self.conv_next(out))
+        #out = F.relu(self.conv_next(out))
+        #out = F.relu(self.conv_next(out))
+        #out = F.relu(self.conv_next(out))
         out = self.conv_last(out)
+        out += res
         return out
 
 class VRES(nn.Module):
     def __init__(self):
         super(VRES, self).__init__()
         self.name = 'VRES'
-        self.conv_first = nn.Conv2d(5, 64, 3, padding=1)
-        self.conv_next = nn.Conv2d(64, 64, 3, padding=1)
-        self.conv_last = nn.Conv2d(64, 1, 3, padding=1)
+        self.conv_first = nn.Conv2d(5, 64, 3, padding=1, bias=False)
+        self.conv_next = nn.Conv2d(64, 64, 3, padding=1, bias=False)
+        self.conv_last = nn.Conv2d(64, 1, 3, padding=1, bias=False)
 
         # xavier initialization
         for m in self.modules():
@@ -133,7 +156,84 @@ class VRES(nn.Module):
         out = F.relu(self.conv_first(x))
         out = self._res_layer(out)
         out = self._res_layer(out)
+        out = self._res_layer(out)
+        out = self._res_layer(out)
+        out = self._res_layer(out)
+        out = self._res_layer(out)
+        out = self._res_layer(out)
+        out = self._res_layer(out)
         out = self.conv_last(out)
         out += res
         return out
+
+
+class Conv_ReLU_Block(nn.Module):
+    def __init__(self):
+        super(Conv_ReLU_Block, self).__init__()
+        self.conv = nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=1, bias=False)
+        self.relu = nn.ReLU(inplace=True)
+        
+    def forward(self, x):
+        return self.relu(self.conv(x))
+        
+class VDSR(nn.Module):
+    def __init__(self):
+        super(VDSR, self).__init__()
+        self.name = 'VDSR'
+        self.residual_layer = self.make_layer(Conv_ReLU_Block, 18)
+        self.input = nn.Conv2d(in_channels=1, out_channels=64, kernel_size=3, stride=1, padding=1, bias=False)
+        self.output = nn.Conv2d(in_channels=64, out_channels=1, kernel_size=3, stride=1, padding=1, bias=False)
+        self.relu = nn.ReLU(inplace=True)
+    
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d):
+                n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
+                m.weight.data.normal_(0, math.sqrt(2. / n))
+                
+    def make_layer(self, block, num_of_layer):
+        layers = []
+        for _ in range(num_of_layer):
+            layers.append(block())
+        return nn.Sequential(*layers)
+
+    def forward(self, x):
+        residual = x
+        out = self.relu(self.input(x))
+        out = self.residual_layer(out)
+        out = self.output(out)
+        out = torch.add(out,residual)
+        return out
+
+class VRNET(nn.Module):
+    def __init__(self):
+        super(VRNET, self).__init__()
+        self.name = 'VRNET'
+        self.conv1 = nn.Conv2d(5, 64, 9, padding=4, bias=False)
+        self.conv2 = nn.Conv2d(64, 32, 5, padding=2, bias=False)
+        self.conv3 = nn.Conv2d(32, 1, 5, padding=2, bias=False)
+    def forward(self, x):
+        x = F.relu(self.conv1(x))
+        x = F.relu(self.conv2(x))
+        x = self.conv3(x)
+        return x
+
+class MFCNN(nn.Module):
+    def __init__(self):
+        super(MFCNN, self).__init__()
+        self.name = 'MFCNN'
+        self.conv1 = nn.Conv2d(5, 32, 9, padding=4, bias=False)
+        self.conv2 = nn.Conv2d(32, 32, 5, padding=2, bias=False)
+        self.conv3 = nn.Conv2d(32, 64, 5, padding=2, bias=False)
+        self.conv4 = nn.Conv2d(64, 32, 3, padding=1, bias=False)
+        self.conv5 = nn.Conv2d(32, 16, 3, padding=1, bias=False)
+        self.conv6 = nn.Conv2d(16, 1, 3, padding=1, bias=False)
+
+    def forward(self, x):
+        x = F.relu(self.conv1(x))
+        x = F.relu(self.conv2(x))
+        x = F.relu(self.conv3(x))
+        x = F.relu(self.conv4(x))
+        x = F.relu(self.conv5(x))
+        x = self.conv6(x)
+        return x
 

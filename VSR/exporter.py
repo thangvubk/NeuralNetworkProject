@@ -33,9 +33,11 @@ class Exporter(object):
             img_name = os.path.join('Results', self.model_name, 
                                     self.model_name+'_output%03d.png'%i)
             scipy.misc.imsave(img_name, img)
-
-        for i, psnr in enumerate(psnrs):
-            print('Psnr img%d: %.3f' %(i, psnr))
+        
+        with open(os.path.join('Results', self.model_name, self.model_name+'.txt'), 'w') as f:
+            for i, psnr in enumerate(psnrs):
+                print('Psnr img%d: %.3f' %(i, psnr))
+                f.write('Psnr img%d: %.3f\n' %(i, psnr))
 
         print('Average test psnr: %.3f' %np.mean(psnrs))
         print('Finish!!!')

@@ -53,7 +53,7 @@ class Solver(object):
         self.learning_rate = kwargs.pop('learning_rate', 1e-4)
         self.optimizer = optim.Adam(
             model.parameters(), 
-            lr=self.learning_rate)
+            lr=self.learning_rate, weight_decay=1e-6)
         self.scheduler = lr_scheduler.StepLR(self.optimizer, step_size=20, gamma=0.5)
         self.loss_fn = kwargs.pop('loss_fn', nn.MSELoss())
         self.fine_tune = kwargs.pop('fine_tune', False)
@@ -74,7 +74,7 @@ class Solver(object):
     def _epoch_step(self, dataset, epoch):
         """ Perform 1 training 'epoch' on the 'dataset'"""
         dataloader = DataLoader(dataset, batch_size=self.batch_size,
-                                shuffle=True, num_workers=4)
+                                shuffle=True, num_workers=8)
 
         num_batchs = len(dataset)//self.batch_size
 
@@ -84,8 +84,6 @@ class Solver(object):
 
         running_loss = 0
         for i, (input_batch, label_batch) in enumerate(dataloader):
-            
-            
 
             #Wrap with torch Variable
             input_batch, label_batch = self._wrap_variable(input_batch,
@@ -127,7 +125,6 @@ class Solver(object):
     
     def _comput_PSNR(self, imgs1, imgs2):
         """Compute PSNR between two image array and return the psnr summation"""
-        # TODO: check for 3 channel image
         N = imgs1.size()[0]
         imdiff = imgs1 - imgs2
         imdiff = imdiff.view(N, -1)
@@ -153,7 +150,7 @@ class Solver(object):
             batch_size = self.batch_size
 
         dataloader = DataLoader(dataset, batch_size=batch_size,
-                                shuffle=False, num_workers=4)
+                                shuffle=False, num_workers=8)
         
         avr_psnr = 0
         
@@ -167,9 +164,12 @@ class Solver(object):
                                                            self.use_gpu)
             
             output_batch = self.model(input_batch)
-            
-            output = output_batch.data*255
-            label = label_batch.data*255
+
+            output = output_batch.data
+            label = label_batch.data
+
+            output = (output + 0.5)*255
+            label = (label + 0.5)*255
             
             output = output.squeeze(dim=1)
             label = label.squeeze(dim=1)

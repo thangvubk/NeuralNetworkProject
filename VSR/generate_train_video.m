@@ -2,11 +2,11 @@ clear; close all;
 
 %% Configuration 
 % NOTE: you can modify this part
-read_path = 'test';
+read_path = 'train';
 scale = 3;
 use_upscale_interpolation = true;
-hr_size = 400;
-stride = 40;
+hr_size = 48;
+stride = 24;
 
 %% Create save path for high resolution and low resolution images based on config
 % NOTE: you should NOT modify the following parts
